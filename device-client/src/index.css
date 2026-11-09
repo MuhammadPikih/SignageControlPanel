@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    @apply bg-black text-white m-0 p-0 overflow-hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
