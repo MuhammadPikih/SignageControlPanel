@@ -4,6 +4,16 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+// ─── Validasi ENV ─────────────────────────────────────────────────────────────
+const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'JWT_SECRET'];
+const missingEnv = requiredEnv.filter(k => !process.env[k] || process.env[k].includes('your-'));
+if (missingEnv.length > 0) {
+  console.error('\n❌ ERROR: Konfigurasi .env tidak lengkap!');
+  console.error('   Variable yang belum diisi:', missingEnv.join(', '));
+  console.error('   Edit file backend/.env dan isi dengan nilai Supabase Anda.\n');
+  process.exit(1);
+}
+
 const { initWebSocket } = require('./services/websocket.service');
 
 const authRoutes = require('./routes/auth.routes');

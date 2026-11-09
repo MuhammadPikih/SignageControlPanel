@@ -23,6 +23,7 @@ function ContentModal({ content, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    e.stopPropagation()
     setLoading(true)
     try {
       const fd = new FormData()
@@ -33,18 +34,22 @@ function ContentModal({ content, onClose, onSave }) {
       await onSave(fd)
       onClose()
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err.response?.data?.error || err.message || 'Gagal menyimpan')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) onClose()
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="card w-full max-w-md">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4" onClick={handleBackdropClick}>
+      <div className="card w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-white">{content ? 'Edit Konten' : 'Tambah Konten'}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300"><X size={18} /></button>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-300"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
