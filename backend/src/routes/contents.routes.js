@@ -28,6 +28,16 @@ const upload = multer({
   },
 });
 
+// Helper: normalize DB row — rename payload_url → payload untuk konsistensi frontend
+function normalize(row) {
+  if (!row) return row;
+  if ('payload_url' in row && !('payload' in row)) {
+    row.payload = row.payload_url;
+    delete row.payload_url;
+  }
+  return row;
+}
+
 // GET /api/contents — list all
 router.get('/', auth, async (req, res) => {
   const { data, error } = await supabase
@@ -36,7 +46,7 @@ router.get('/', auth, async (req, res) => {
     .order('created_at', { ascending: false });
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.json(data);
+  return res.json(data.map(normalize));
 });
 
 // GET /api/contents/:id — single content
@@ -48,7 +58,7 @@ router.get('/:id', auth, async (req, res) => {
     .single();
 
   if (error) return res.status(404).json({ error: 'Content not found' });
-  return res.json(data);
+  return res.json(normalize(data));
 });
 
 // POST /api/contents — create (with optional file upload)
@@ -59,21 +69,19 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'judul and tipe are required' });
   }
 
-  let payload = url || null;
-
-  // If file uploaded, use local path as payload
+  let payloadValue = url || null;
   if (req.file) {
-    payload = `/uploads/${req.file.filename}`;
+    payloadValue = `/uploads/${req.file.filename}`;
   }
 
   const { data, error } = await supabase
     .from('contents')
-    .insert([{ judul, tipe, payload }])
+    .insert([{ judul, tipe, payload_url: payloadValue }])
     .select()
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.status(201).json(data);
+  return res.status(201).json(normalize(data));
 });
 
 // PUT /api/contents/:id — update
@@ -83,8 +91,8 @@ router.put('/:id', auth, upload.single('file'), async (req, res) => {
 
   if (judul) updates.judul = judul;
   if (tipe) updates.tipe = tipe;
-  if (url) updates.payload = url;
-  if (req.file) updates.payload = `/uploads/${req.file.filename}`;
+  if (url) updates.payload_url = url;
+  if (req.file) updates.payload_url = `/uploads/${req.file.filename}`;
 
   const { data, error } = await supabase
     .from('contents')
@@ -94,7 +102,7 @@ router.put('/:id', auth, upload.single('file'), async (req, res) => {
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.json(data);
+  return res.json(normalize(data));
 });
 
 // DELETE /api/contents/:id — delete

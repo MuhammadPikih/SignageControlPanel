@@ -3,12 +3,30 @@ const supabase = require('../supabase');
 const auth = require('../middleware/auth.middleware');
 const { pushToDevice, deviceConnections } = require('../services/websocket.service');
 
+// Normalize content row: payload_url → payload (agar konsisten di frontend & device client)
+function normalizeContent(row) {
+  if (!row) return row;
+  if ('payload_url' in row && !('payload' in row)) {
+    row.payload = row.payload_url;
+    delete row.payload_url;
+  }
+  return row;
+}
+
+// Normalize playlist items (nested contents)
+function normalizePlaylist(rows) {
+  return rows.map(item => {
+    if (item.contents) item.contents = normalizeContent({ ...item.contents });
+    return item;
+  });
+}
+
 // GET /api/devices — list all
 router.get('/', auth, async (req, res) => {
   const { data, error } = await supabase
     .from('devices')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('nama', { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
   return res.json(data);
@@ -85,9 +103,11 @@ router.post('/:id/push', auth, async (req, res) => {
     return res.status(404).json({ error: 'Content not found' });
   }
 
+  const normalizedContent = normalizeContent({ ...content });
+
   const sent = pushToDevice(deviceId, {
     type: 'command:show',
-    content,
+    content: normalizedContent,
     timestamp: Date.now(),
   });
 
@@ -95,7 +115,7 @@ router.post('/:id/push', auth, async (req, res) => {
     return res.status(503).json({ error: 'Device is not connected' });
   }
 
-  return res.json({ message: 'Content pushed to device', content });
+  return res.json({ message: 'Content pushed to device', content: normalizedContent });
 });
 
 // GET /api/devices/:id/playlist — get device playlist
@@ -107,7 +127,7 @@ router.get('/:id/playlist', auth, async (req, res) => {
     .order('order_index', { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
-  return res.json(data);
+  return res.json(normalizePlaylist(data));
 });
 
 // POST /api/devices/:id/playlist — add content to playlist
@@ -155,7 +175,7 @@ router.post('/:id/playlist/push', auth, async (req, res) => {
 
   const sent = pushToDevice(deviceId, {
     type: 'command:playlist',
-    playlist,
+    playlist: normalizePlaylist(playlist),
     timestamp: Date.now(),
   });
 
