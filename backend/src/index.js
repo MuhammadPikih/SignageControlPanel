@@ -5,7 +5,12 @@ const cors = require('cors');
 const path = require('path');
 
 // ─── Validasi ENV ─────────────────────────────────────────────────────────────
-const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'JWT_SECRET'];
+const requiredEnv = ['SUPABASE_URL', 'JWT_SECRET'];
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SECRET_KEY;
+if (!supabaseKey) {
+  console.error('\n❌ ERROR: SUPABASE_SERVICE_KEY atau SUPABASE_SECRET_KEY tidak ditemukan di .env\n');
+  process.exit(1);
+}
 const missingEnv = requiredEnv.filter(k => !process.env[k] || process.env[k].includes('your-'));
 if (missingEnv.length > 0) {
   console.error('\n❌ ERROR: Konfigurasi .env tidak lengkap!');
